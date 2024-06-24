@@ -17,20 +17,19 @@ import jakarta.transaction.Transactional;
 
 @Service
 public class ExpenseServiceImpl implements ExpenseService {
-    ExpenseRepository expenseRepository;
-    ClientService clientService;
-    CategoryService categoryService;
-    EntityManager entityManager;
+    private final ExpenseRepository expenseRepository;
+    private final ClientService clientService;
+    private final CategoryService categoryService;
+    private final EntityManager entityManager;
 
     @Autowired
-    public ExpenseServiceImpl(ExpenseRepository expenseRepository, ClientService clientService
-            , CategoryService categoryService, EntityManager entityManager) {
+    public ExpenseServiceImpl(ExpenseRepository expenseRepository, ClientService clientService, 
+                              CategoryService categoryService, EntityManager entityManager) {
         this.expenseRepository = expenseRepository;
         this.clientService = clientService;
         this.categoryService = categoryService;
         this.entityManager = entityManager;
     }
-
 
     @Override
     public Expense findExpenseById(int id) {
@@ -78,28 +77,29 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
-    public List<Expense> findFilterResult(FilterDTO filter) {
-        String query = "select e from Expense e where";
+    public List<Expense> findFilterResult(FilterDTO filter, int clientId) {
+        String query = "select e from Expense e where e.client.id = :clientId";
+
         if (!"all".equals(filter.getCategory())) {
             String category = filter.getCategory();
             int categoryId = categoryService.findCategoryByName(category).getId();
-            query += String.format(" e.category.id = %d AND", categoryId);
+            query += String.format(" and e.category.id = %d", categoryId);
         }
+
         int from = filter.getFrom();
         int to = filter.getTo();
-        query += String.format(" e.amount between %d and %d", from, to);
+        query += String.format(" and e.amount between %d and %d", from, to);
+
         if (!"all".equals(filter.getYear())) {
-            query += String.format(" AND CAST(SUBSTRING(e.dateTime, 1, 4) AS INTEGER) = %s", filter.getYear());
+            query += String.format(" and cast(substring(e.dateTime, 1, 4) as integer) = %s", filter.getYear());
         }
+
         if (!"all".equals(filter.getMonth())) {
-            query += String.format(" AND CAST(SUBSTRING(e.dateTime, 6, 2) AS INTEGER) = %s", filter.getMonth());
+            query += String.format(" and cast(substring(e.dateTime, 6, 2) as integer) = %s", filter.getMonth());
         }
+
         TypedQuery<Expense> expenseTypedQuery = entityManager.createQuery(query, Expense.class);
-        List<Expense> expenseList = expenseTypedQuery.getResultList();
-        return expenseList;
+        expenseTypedQuery.setParameter("clientId", clientId);
+        return expenseTypedQuery.getResultList();
     }
-
-
-
-
 }
