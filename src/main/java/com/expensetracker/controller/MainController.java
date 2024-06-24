@@ -134,30 +134,31 @@ public class MainController {
 		return "redirect:/list";
 	}
 
-	@PostMapping("/processFilter")
-	public String processFilter(@ModelAttribute("filter") FilterDTO filter, Model model) {
-		List<Expense> expenseList = expenseService.findFilterResult(filter);
-		for (Expense expense : expenseList) {
-			if (expense.getCategory() != null) {
-				Category category = categoryService.findCategoryById(expense.getCategory().getId());
-				if (category != null) {
-					expense.setCategoryName(category.getName());
-				} else {
-					// Handle scenario where category is null (optional)
-					expense.setCategoryName("Unknown Category");
-				}
-			} else {
-				// Handle scenario where expense category is null (optional)
-				expense.setCategoryName("Unknown Category");
-			}
+	 @PostMapping("/processFilter")
+	    public String processFilter(@ModelAttribute("filter") FilterDTO filter, Model model, HttpSession session) {
+	        Client client = (Client) session.getAttribute("client");
+	        int clientId = client.getId();
 
-			LocalDateTime dateTime = LocalDateTime.parse(expense.getDateTime(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-			expense.setDate(dateTime.toLocalDate().toString());
-			expense.setTime(dateTime.toLocalTime().toString());
-		}
+	        List<Expense> expenseList = expenseService.findFilterResult(filter, clientId);
 
-		model.addAttribute("expenseList", expenseList);
-		return "filter-result";
-	}
+	        for (Expense expense : expenseList) {
+	            if (expense.getCategory() != null) {
+	                Category category = categoryService.findCategoryById(expense.getCategory().getId());
+	                if (category != null) {
+	                    expense.setCategoryName(category.getName());
+	                } else {
+	                    expense.setCategoryName("Unknown Category");
+	                }
+	            } else {
+	                expense.setCategoryName("Unknown Category");
+	            }
 
+	            LocalDateTime dateTime = LocalDateTime.parse(expense.getDateTime(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+	            expense.setDate(dateTime.toLocalDate().toString());
+	            expense.setTime(dateTime.toLocalTime().toString());
+	        }
+
+	        model.addAttribute("expenseList", expenseList);
+	        return "filter-result";
+	    }
 }
